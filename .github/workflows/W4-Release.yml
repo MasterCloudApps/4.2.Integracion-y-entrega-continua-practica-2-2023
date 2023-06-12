@@ -5,6 +5,9 @@ on:
   push: 
     branches: 
       - 'release/**'
+    paths:
+      - 'src/**'
+      - 'pom.xml'
 
   workflow_dispatch:
 

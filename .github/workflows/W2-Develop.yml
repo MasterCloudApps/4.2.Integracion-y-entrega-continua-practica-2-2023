@@ -3,6 +3,9 @@ name: Develop workflow
 on:
   push:
     branches: [ develop ]
+    paths:
+      - 'src/**'
+      - 'pom.xml'
   workflow_dispatch:
 
 env:
