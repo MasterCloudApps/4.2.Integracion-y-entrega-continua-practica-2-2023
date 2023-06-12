@@ -58,6 +58,6 @@ jobs:
     - name: Push image to Github Container Registry
       run: |
         IMAGE_USER=$(echo ${{ github.repository_owner }} | awk '{print tolower($0)}')
-        docker tag $IMAGE_NAME ghcr.io/$IMAGE_USER/$IMAGE_NAME:${{ steps.project.outputs.tag }}-nightly
+        docker tag $IMAGE_NAME ghcr.io/$IMAGE_USER/$IMAGE_NAME:${{ steps.timestamp.outputs.date }}-nightly
         docker tag $IMAGE_NAME ghcr.io/$IMAGE_USER/$IMAGE_NAME:nightly
         docker push ghcr.io/$IMAGE_USER/$IMAGE_NAME --all-tags
