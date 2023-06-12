@@ -1,0 +1,63 @@
+name: Nightly workflow
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # run at 2 AM UTC
+  workflow_dispatch:
+
+env:
+ IMAGE_NAME: books-reviewer
+
+jobs:
+  nightly:
+    name: Build Java application and run test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Clone repository
+      uses: actions/checkout@v3
+      with:
+        ref: develop
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+    - name: Run unitary test
+      run: mvn -B -Dtest=*UnitaryTest test
+    - name: Run REST test
+      run: mvn -B -Dtest=*RestTest test
+    - name: Run e2e test
+      run: mvn -B -Dtest=*SeleniumTest test
+    - name: Build image
+      run: mvn spring-boot:build-image -DskipTests -Dspring-boot.build-image.imageName=$IMAGE_NAME
+    - name: Run application
+      run: docker run --rm -d --name $IMAGE_NAME-test -p 8080:8080 $IMAGE_NAME
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+    - name: Run REST test over Docker application
+      run: mvn -B -Dtest=RestTest -Dport=8080 test
+    - name: Run e2e test over Docker application
+      run: mvn -B -Dtest=SeleniumTest -Dport=8080 test
+    - name: Stop application
+      run: docker stop $IMAGE_NAME-test
+    - name: Generate timestamp
+      run: echo "date=$(date +'%Y%m%d.%H%M%S')" >> $GITHUB_OUTPUT
+      id: timestamp
+    - name: Login to DockerHub
+      run: docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" -p "${{ secrets.DOCKERHUB_TOKEN }}"
+    - name: Push image to DockerHub
+      run: |
+        docker tag $IMAGE_NAME ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:${{ steps.timestamp.outputs.date }}-nightly
+        docker tag $IMAGE_NAME ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:nightly
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME --all-tags
+    - name: Login to GitHub Container Registry
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+    - name: Push image to Github Container Registry
+      run: |
+        IMAGE_USER=$(echo ${{ github.repository_owner }} | awk '{print tolower($0)}')
+        docker tag $IMAGE_NAME ghcr.io/$IMAGE_USER/$IMAGE_NAME:${{ steps.project.outputs.tag }}-nightly
+        docker tag $IMAGE_NAME ghcr.io/$IMAGE_USER/$IMAGE_NAME:nightly
+        docker push ghcr.io/$IMAGE_USER/$IMAGE_NAME --all-tags

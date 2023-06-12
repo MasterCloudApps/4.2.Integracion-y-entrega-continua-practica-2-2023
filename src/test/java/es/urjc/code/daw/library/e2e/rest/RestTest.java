@@ -26,7 +26,7 @@ public class RestTest {
 
     @BeforeEach
     public void setUp() {
-        RestAssured.port = port;
+        RestAssured.port = Integer.parseInt(System.getProperty("port", port+""));
     }
 
     @Autowired
