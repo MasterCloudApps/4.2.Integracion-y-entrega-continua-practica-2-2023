@@ -34,6 +34,8 @@ public class BookService {
 	}
 
 	public Book save(Book book) {
+		LineBreaker lineBreaker = new LineBreaker();
+		book.setDescription(lineBreaker.breakLine(book.getDescription(), 10));
 		Book newBook = repository.save(book);
 		notificationService.notify("Book Event: book with title="+newBook.getTitle()+" was created");
 		return newBook;
